@@ -36,14 +36,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 import org.jboss.as.repository.ContentRepository;
-import org.jboss.as.server.deploymentoverlay.DeploymentOverlayIndex;
-import org.jboss.as.server.logging.ServerLogger;
 import org.jboss.as.server.deployment.module.ResourceRoot;
 import org.jboss.as.server.deployment.module.TempFileProviderService;
+import org.jboss.as.server.deploymentoverlay.DeploymentOverlayIndex;
+import org.jboss.as.server.logging.ServerLogger;
 import org.jboss.vfs.VFS;
 import org.jboss.vfs.VirtualFile;
 
@@ -65,6 +66,8 @@ public class DeploymentOverlayDeploymentUnitProcessor implements DeploymentUnitP
 
     private final ContentRepository contentRepository;
 
+    private static final String WAR_EXTENSION = ".war";
+
     protected static final AttachmentKey<AttachmentList<Closeable>> MOUNTED_FILES = AttachmentKey.createList(Closeable.class);
     protected static final AttachmentKey<Map<String, byte[]>> DEFERRED_OVERLAYS = AttachmentKey.create(Map.class);
 
@@ -75,7 +78,7 @@ public class DeploymentOverlayDeploymentUnitProcessor implements DeploymentUnitP
     @Override
     public void deploy(final DeploymentPhaseContext phaseContext) throws DeploymentUnitProcessingException {
         final DeploymentUnit deploymentUnit = phaseContext.getDeploymentUnit();
-        final ResourceRoot deploymentRoot = deploymentUnit.getAttachment(Attachments.DEPLOYMENT_ROOT);
+        ResourceRoot deploymentRoot = deploymentUnit.getAttachment(Attachments.DEPLOYMENT_ROOT);
 
         Map<String, MountedDeploymentOverlay> mounts = getMountsAttachment(deploymentUnit);
 
@@ -85,15 +88,16 @@ public class DeploymentOverlayDeploymentUnitProcessor implements DeploymentUnitP
         if (overlayEntries == null) {
             return;
         }
+
         //exploded is true if this is a zip deployment that has been mounted exploded
         final boolean exploded = MountExplodedMarker.isMountExploded(deploymentUnit) && !ExplodedDeploymentMarker.isExplodedDeployment(deploymentUnit);
         final Set<String> paths = new HashSet<String>();
-        for (final Map.Entry<String, byte[]> entry : overlayEntries.entrySet()) {
-
+        for (Map.Entry<String, byte[]> entry: overlayEntries.entrySet()) {
             String path = entry.getKey();
             if (path.startsWith("/")) {
                 path = path.substring(1);
             }
+
             try {
                 if (!paths.contains(path)) {
                     VirtualFile mountPoint = deploymentRoot.getRoot().getChild(path);
@@ -102,14 +106,16 @@ public class DeploymentOverlayDeploymentUnitProcessor implements DeploymentUnitP
                     VirtualFile content = contentRepository.getContent(entry.getValue());
                     if (exploded) {
                         VirtualFile parent = mountPoint.getParent();
+                        List<VirtualFile> createParents = new ArrayList<>();
                         while (!parent.exists()) {
+                            createParents.add(parent);
                             parent = parent.getParent();
                         }
+
                         //we need to check if the parent is a directory
                         //if it is a file we assume it is an archive that is yet to be mounted and we add it to the deferred list
                         if(parent.isDirectory()) {
-                            //for exploded deployments we simply copy the file
-                            copyFile(content.getPhysicalFile(), mountPoint.getPhysicalFile());
+                            handleExplodedEntryWithDirParent(deploymentUnit, content, mountPoint, mounts, path);
                         } else {
                             handleEntryWithFileParent(deferred, entry, path, parent);
                         }
@@ -120,9 +126,14 @@ public class DeploymentOverlayDeploymentUnitProcessor implements DeploymentUnitP
                             createParents.add(parent);
                             parent = parent.getParent();
                         }
+
                         //we need to check if the parent is a directory
                         //if it is a file we assume it is an archive that is yet to be mounted and we add it to the deferred list
                         if(parent.isDirectory()) {
+                            if (isExplodedSubUnitOverlay(deploymentUnit, mountPoint, path)) {// like: war/*.html
+                                copyFile(content.getPhysicalFile(), mountPoint.getPhysicalFile());
+                                continue;
+                            }
                             Collections.reverse(createParents);
                             for (VirtualFile file : createParents) {
                                 Closeable closable = VFS.mountTemp(file, TempFileProviderService.provider());
@@ -137,18 +148,39 @@ public class DeploymentOverlayDeploymentUnitProcessor implements DeploymentUnitP
                             //we take note of these overlays and try and mount them at the end of the STRUCTURE phase
                             handleEntryWithFileParent(deferred, entry, path, parent);
                         }
-
                     }
                 }
             } catch (IOException e) {
                 throw ServerLogger.ROOT_LOGGER.deploymentOverlayFailed(e, entry.getKey(), path);
             }
         }
+    }
 
+    private boolean isExplodedSubUnitOverlay(DeploymentUnit deploymentUnit, VirtualFile mountPoint, String path) {
+        final List<ResourceRoot> childRes = deploymentUnit.getAttachmentList(Attachments.RESOURCE_ROOTS);
+        if (childRes != null) {
+            for (ResourceRoot rs: childRes) {
+                if (path.startsWith(rs.getRoot().getName())) {
+                    String relativePath = mountPoint.getPathNameRelativeTo(rs.getRoot());
+                    if (relativePath != null
+                            && relativePath.length() > 0
+                            && rs.getRoot().getName().toLowerCase(Locale.ENGLISH).endsWith(WAR_EXTENSION)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     protected void handleEntryWithFileParent(Map<String, byte[]> deferred, Map.Entry<String, byte[]> entry, String path, VirtualFile parent) {
         deferred.put(path, entry.getValue());
+    }
+
+    protected void handleExplodedEntryWithDirParent(DeploymentUnit deploymentUnit,
+            VirtualFile content, VirtualFile mountPoint, Map<String, MountedDeploymentOverlay> mounts,
+            String overLayPath) throws IOException{
+        copyFile(content.getPhysicalFile(), mountPoint.getPhysicalFile());
     }
 
     protected Map<String, byte[]> getDeferredAttachment(DeploymentUnit deploymentUnit) {
