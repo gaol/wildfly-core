@@ -205,10 +205,10 @@ public class SocketHandlerTestCase extends AbstractLoggingTestCase {
     @Test
     public void testWithFilter() throws Exception {
         // Create a TCP server and start it
+        final ModelNode address = addSocketHandler("test-log-server", "INFO", "TCP");
         try (JsonLogServer server = JsonLogServer.createTcpServer(PORT)) {
             server.start(DFT_TIMEOUT);
 
-            final ModelNode address = addSocketHandler("test-log-server", "INFO", "TCP");
             executeOperation(Operations.createWriteAttributeOperation(address, "filter-spec", "substituteAll(\"\\\\s\", \"_\")"));
             // We should end up with only 3 messages that should have the spaces removed and replaced with an underscore
             final List<JsonObject> foundMessages = executeRequest("test message",
@@ -219,6 +219,8 @@ public class SocketHandlerTestCase extends AbstractLoggingTestCase {
                 Assert.assertEquals(String.format("Expected test_message but found %s for level %s.",
                         msg, foundMessage.getString("level")), "test_message", msg);
             }
+        } finally {
+            executeOperation(Operations.createUndefineAttributeOperation(address, "filter-spec"));
         }
     }
 
