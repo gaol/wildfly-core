@@ -43,7 +43,7 @@ import org.jboss.dmr.Property;
  *
  * @author Brian Stansberry (c) 2013 Red Hat Inc.
  */
-class FilteredData {
+public class FilteredData {
 
     private final int baseAddressLength;
     private Map<PathAddress, ResourceData> map;

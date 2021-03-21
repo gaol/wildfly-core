@@ -102,7 +102,7 @@ public final class QueryOperationHandler extends GlobalOperationHandlers.Abstrac
     }
 
     @Override
-    void doExecute(final OperationContext parentContext, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResources) throws OperationFailedException {
+    protected void doExecute(final OperationContext parentContext, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResources) throws OperationFailedException {
 
         final ModelNode where = WHERE_ATT.validateOperation(operation);
         // Use resolveModelAttribute for OPERATOR_ATT to pull out the default value

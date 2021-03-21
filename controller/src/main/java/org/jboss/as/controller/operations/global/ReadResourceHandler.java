@@ -161,7 +161,7 @@ public class ReadResourceHandler extends GlobalOperationHandlers.AbstractMultiTa
 
 
     @Override
-    void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
+    protected void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
 
         if (filteredData == null) {
             doExecuteInternal(context, operation, ignoreMissingResource);

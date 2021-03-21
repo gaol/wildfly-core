@@ -139,7 +139,7 @@ public class ReadAttributeGroupHandler extends AbstractMultiTargetHandler {
     }
 
     @Override
-    void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
+    protected void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
         validator.validate(operation);
         final PathAddress address = context.getCurrentAddress();
 

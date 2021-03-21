@@ -154,7 +154,7 @@ public class ReadFeatureDescriptionHandler extends GlobalOperationHandlers.Abstr
     }
 
     @Override
-    void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
+    protected void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
         if (!forChild) {
             doExecuteInternal(context, operation);
         } else {

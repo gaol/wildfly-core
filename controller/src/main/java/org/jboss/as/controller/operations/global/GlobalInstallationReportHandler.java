@@ -143,7 +143,7 @@ public class GlobalInstallationReportHandler extends GlobalOperationHandlers.Abs
             .build();
 
     @Override
-    void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
+    protected void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
         final Map<String, GlobalOperationHandlers.AvailableResponse> servers = new HashMap<>();
         ModelNode rootModel = context.readResourceFromRoot(PathAddress.EMPTY_ADDRESS,false).getModel();
         final String defaultOrganization = (rootModel.hasDefined(DOMAIN_ORGANIZATION)) ? rootModel.get(DOMAIN_ORGANIZATION).asString() : null;

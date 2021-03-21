@@ -271,7 +271,7 @@ public class GlobalOperationHandlers {
          *                          not provide a result
          * @throws OperationFailedException
          */
-        abstract void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException;
+        protected abstract void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException;
 
         private static class MultiTargetResultHandler implements OperationContext.ResultHandler {
 

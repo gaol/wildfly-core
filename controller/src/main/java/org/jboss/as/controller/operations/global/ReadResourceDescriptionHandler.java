@@ -149,7 +149,7 @@ public class ReadResourceDescriptionHandler extends GlobalOperationHandlers.Abst
     }
 
     @Override
-    void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
+    protected void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData, boolean ignoreMissingResource) throws OperationFailedException {
         final PathAddress address = context.getCurrentAddress();
         ReadResourceDescriptionAccessControlContext accessControlContext = getAccessControlContext() == null ? new ReadResourceDescriptionAccessControlContext(address, null) : getAccessControlContext();
         doExecute(context, operation, accessControlContext);
